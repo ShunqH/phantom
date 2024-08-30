@@ -232,6 +232,16 @@ subroutine select_unit(string,unit,ierr)
       "M_solar/yr","Ms/year","M_s/year","ms/year","m_s/year","Msun/year",&
       "M_sun/year","Msolar/year","M_solar/year")
     unit = solarm/years
+ case('cm/s', 'centimeters/second', 'cm/sec')
+    unit = 1.d0/seconds 
+ case('m/s', 'meters/second', 'm/sec', 'meters/sec')
+    unit = 100*1.d0/seconds 
+ case('km/s', 'kilometers/second', 'km/sec', 'kilometers/sec')
+    unit = km/seconds 
+ case('pc/yr', 'parsec/year', 'pc/yrs', 'parsec/years')
+    unit = pc/years 
+ case('kpc/yr', 'kiloparsec/yr', 'kpc/yrs', 'kiloparsec/years')
+    unit = kpc/years 
  case default
     ierr = 1
     unit = 1.d0
@@ -316,7 +326,31 @@ logical function is_mdot_unit(string)
  end select
 
 end function is_mdot_unit
+!------------------------------------------------------------------------------------
+!+
+!  check if string is a unit of velocity
+!+
+!------------------------------------------------------------------------------------
+logical function is_velocity_unit(string)
+ character(len=*), intent(in) :: string
+ character(len=len(string)) :: unitstr
+ real(kind=8) :: fac
+ integer :: ierr
 
+ ierr = 0
+ call get_unit_multiplier(string,unitstr,fac,ierr)
+
+ select case(trim(unitstr))
+case('cm/s', 'centimeters/second', 'cm/sec', 'm/s', 'meters/second', &
+     'm/sec', 'meters/sec', 'km/s', 'kilometers/second', 'km/sec', & 
+     'kilometers/sec', 'pc/yr', 'parsec/year', 'pc/yrs', 'parsec/years', &
+     'kpc/yr', 'kiloparsec/yr', 'kpc/yrs', 'kiloparsec/years')
+    is_velocity_unit = .true.
+ case default
+    is_velocity_unit = .false.
+ end select
+
+end function is_velocity_unit
 !------------------------------------------------------------------------------------
 !+
 !  parse a string like "10.*days" or "10*au" and return the value in code units
@@ -335,6 +369,8 @@ real function in_code_units(string,ierr) result(rval)
     rval = real(val/udist)
  elseif (is_mdot_unit(string) .and. ierr == 0) then
     rval = real(val/(umass/utime))
+ elseif (is_velocity_unit(string) .and. ierr==0) then 
+    rval = real(val/(udist/utime))
  else
     rval = real(val)  ! no unit conversion
  endif

@@ -27,7 +27,7 @@ module inject
 !   - phi         : the orientation of the star, (random_type=1, 
 !                   if theta=90 and phi=90 more particles are injected in x-z plane)
 !   - inject_pt   : the partical that produce wind (when wind_type=1)
-!   - wind_speed_factor : factor to scale the wind speed based on the Keplerian speed at rinject (when wind_type=1)
+!   - wind_speed_str : wind speed with units (when wind_type=1)
 !   - wind_speed     : wind speed  
 !   - r_inject_str   : rinject with unit (when wind_type=1)
 !
@@ -40,6 +40,7 @@ module inject
  character(len=*), parameter, public :: inject_type = 'asteroidwind'
  character(len=20), public :: mdot_str = "5.e8*g/s"
  character(len=20), public :: r_inject_str = "0.5*AU"
+ character(len=20), public :: wind_speed_str = "10*km/s"
  real, public :: mdot = 1.e8     ! mass injection rate in grams/second
 
  public :: init_inject,inject_particles,write_options_inject,read_options_inject,&
@@ -57,7 +58,6 @@ module inject
  real         :: phi           = 0.       ! the orientation of the star
  integer      :: inject_pt     = 2        ! the partical that produce wind (when wind_type=1)
  real         :: wind_speed    = 1.0      ! wind speed in code unit (when wind_type=1)
- real         :: wind_speed_factor = 1.2  ! factor to scale the wind speed based on the Keplerian speed at rinject
  !real         :: rinject       = 1.0      
 
 contains
@@ -143,7 +143,7 @@ subroutine inject_particles(time,dtlast,xyzh,vxyzu,xyzmh_ptmass,vxyz_ptmass,&
    r2 = xyzmh_ptmass(1:3,inject_pt)
    rinject   = in_code_units(r_inject_str, ierr)
    v2        = vxyz_ptmass(1:3,pt)
-   wind_speed = wind_speed_factor*sqrt(xyzmh_ptmass(4, inject_pt)/rinject)
+   wind_speed = in_code_units(wind_speed_str,ierr)
    u         = 0. ! setup is isothermal so utherm is not stored
    h         = hfact
 
@@ -197,7 +197,8 @@ subroutine inject_particles(time,dtlast,xyzh,vxyzu,xyzmh_ptmass,vxyz_ptmass,&
     case (1)
       dx = get_pos_on_sphere(seed, delta_theta)
       call rotatevec(dx, rotaxis, theta_rad)
-      call cross_product3D(veczprime, dx, vhat)
+      vhat = dx
+      ! call cross_product3D(veczprime, dx, vhat)
       vxyz      = v2 + wind_speed*vhat
     end select
     ipart     = npart + 1
@@ -274,8 +275,7 @@ subroutine write_options_inject(iunit)
  call write_inopt(theta, 'theta', 'the tilt inclination of the star or planet (random_type=1)', iunit)
  call write_inopt(phi, 'phi', 'the tilt orientation of the star, (random_type=1)', iunit)
  call write_inopt(inject_pt, 'inject_pt', 'the particle that excites wind (when wind_type=1)', iunit)
- call write_inopt(wind_speed_factor, & 
-                  & 'wind_speed_factor', 'factor to scale the wind speed based on the Keplerian speed at rinject', iunit)
+ call write_inopt(wind_speed_str, 'wind_speed', 'wind speed with unit, e.g., 10km/s, 1e4*m/s, or 1.0pc/yr', iunit)
  call write_inopt(r_inject_str, 'r_inject', 'inject radius with units, e.g. 1*AU, 1e8m, (when wind_type=1)', iunit)
 
 end subroutine write_options_inject
@@ -327,8 +327,8 @@ subroutine read_options_inject(name,valstring,imatch,igotall,ierr)
  case('inject_pt')
     read(valstring,*,iostat=ierr) inject_pt
     ngot = ngot + 1
- case('wind_speed_factor')
-    read(valstring,*,iostat=ierr) wind_speed_factor
+ case('wind_speed')
+    read(valstring,'(A)',iostat=ierr) wind_speed_str
     ngot = ngot + 1
  case('r_inject')
     read(valstring,'(A)',iostat=ierr) r_inject_str
