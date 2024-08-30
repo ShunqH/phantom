@@ -112,14 +112,6 @@ subroutine inject_particles(time,dtlast,xyzh,vxyzu,xyzmh_ptmass,vxyz_ptmass,&
 
  ! calculate the wind velocity and other quantities for different wind type
  select case (wind_type)
- case(1) ! set up random wind
-    if (inject_pt > nptmass) call fatal('inject_randomwind', 'not enough point masses for inject target, check inject_pt')
-    r2 = xyzmh_ptmass(1:3,inject_pt)
-    rinject   = in_code_units(r_inject_str, ierr)
-    v2        = vxyz_ptmass(1:3,pt)
-    wind_speed = wind_speed_factor*sqrt(xyzmh_ptmass(4, inject_pt)/rinject)
-    u         = 0. ! setup is isothermal so utherm is not stored
-    h         = hfact
  case default ! set up asteroid wind
     if (nptmass < 1 .and. iexternalforce == 0) &
       call fatal('inject_asteroidwind','not enough point masses for asteroid wind injection')
@@ -151,7 +143,7 @@ subroutine inject_particles(time,dtlast,xyzh,vxyzu,xyzmh_ptmass,vxyz_ptmass,&
    if (inject_pt > nptmass) call fatal('inject_randomwind', 'not enough point masses for inject target, check inject_pt')
    r2 = xyzmh_ptmass(1:3,inject_pt)
    rinject   = in_code_units(r_inject_str, ierr)
-   v2        = vxyz_ptmass(1:3,pt)
+   v2        = vxyz_ptmass(1:3,inject_pt)
    wind_speed = in_code_units(wind_speed_str,ierr)
    u         = 0. ! setup is isothermal so utherm is not stored
    h         = hfact
@@ -203,9 +195,11 @@ subroutine inject_particles(time,dtlast,xyzh,vxyzu,xyzmh_ptmass,vxyz_ptmass,&
     case (1)
       dx = get_pos_on_sphere(seed, delta_theta)
       call rotatevec(dx, rotaxis, theta_rad)
-      vhat = dx
+      ! vhat = dx
       ! call cross_product3D(veczprime, dx, vhat)
-      vxyz      = v2 + wind_speed*vhat
+      vxyz      = wind_speed*dx + v2 
+      ! write(*,*) vxyz
+      ! write(*,*) wind_speed
       xyz       = r2 + rinject*dx
     case default
       xyz       = r2 + rinject*get_pos_on_sphere(seed, delta_theta)
